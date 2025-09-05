@@ -187,16 +187,17 @@ export function mergeRateLimitRules(
 Create `tests/defaults.test.ts`:
 
 ```ts
+import { test, expect, describe } from 'bun:test';
 import { DEFAULT_RATE_LIMIT_RULES, mergeRateLimitRules } from '../src/rate-limiting/defaults';
 
 describe('Rate Limit Defaults', () => {
-  it('should have sensible default rules', () => {
+  test('should have sensible default rules', () => {
     expect(DEFAULT_RATE_LIMIT_RULES.global.max).toBe(60);
     expect(DEFAULT_RATE_LIMIT_RULES.global.windowMs).toBe(60_000);
     expect(DEFAULT_RATE_LIMIT_RULES.global.per).toBe('app');
   });
 
-  it('should have endpoint-specific rules', () => {
+  test('should have endpoint-specific rules', () => {
     expect(DEFAULT_RATE_LIMIT_RULES.endpoints['/api/submit']).toEqual({
       max: 1,
       windowMs: 600_000,
@@ -204,7 +205,7 @@ describe('Rate Limit Defaults', () => {
     });
   });
 
-  it('should merge custom rules correctly', () => {
+  test('should merge custom rules correctly', () => {
     const custom = {
       global: { max: 100, windowMs: 60_000, per: 'app' as const },
       endpoints: {
@@ -318,6 +319,7 @@ export class TokenBucket {
 Create `tests/TokenBucket.test.ts`:
 
 ```ts
+import { test, expect, describe, beforeEach } from 'bun:test';
 import { TokenBucket } from '../src/rate-limiting/TokenBucket';
 import { RateLimitState } from '../src/types';
 
@@ -331,7 +333,7 @@ describe('TokenBucket', () => {
   });
 
   describe('refill', () => {
-    it('should refill tokens based on elapsed time', () => {
+    test('should refill tokens based on elapsed time', () => {
       const state: RateLimitState = {
         tokens: 5,
         lastRefill: now - 500 // 500ms ago
@@ -344,7 +346,7 @@ describe('TokenBucket', () => {
       expect(newState.lastRefill).toBe(now);
     });
 
-    it('should not exceed capacity', () => {
+    test('should not exceed capacity', () => {
       const state: RateLimitState = {
         tokens: 8,
         lastRefill: now - 1000 // 1000ms ago
@@ -356,7 +358,7 @@ describe('TokenBucket', () => {
       expect(newState.tokens).toBe(10);
     });
 
-    it('should not refill if no time passed', () => {
+    test('should not refill if no time passed', () => {
       const state: RateLimitState = {
         tokens: 5,
         lastRefill: now
@@ -368,7 +370,7 @@ describe('TokenBucket', () => {
   });
 
   describe('consume', () => {
-    it('should consume tokens when available', () => {
+    test('should consume tokens when available', () => {
       const state: RateLimitState = {
         tokens: 5,
         lastRefill: now
@@ -380,7 +382,7 @@ describe('TokenBucket', () => {
       expect(result.state.tokens).toBe(3);
     });
 
-    it('should reject consumption when insufficient tokens', () => {
+    test('should reject consumption when insufficient tokens', () => {
       const state: RateLimitState = {
         tokens: 1,
         lastRefill: now
@@ -392,7 +394,7 @@ describe('TokenBucket', () => {
       expect(result.state.tokens).toBe(1); // Unchanged
     });
 
-    it('should refill before consuming', () => {
+    test('should refill before consuming', () => {
       const state: RateLimitState = {
         tokens: 0,
         lastRefill: now - 1000 // 1000ms ago, should add 10 tokens
@@ -406,7 +408,7 @@ describe('TokenBucket', () => {
   });
 
   describe('getNextTokenTime', () => {
-    it('should return current time if tokens available', () => {
+    test('should return current time if tokens available', () => {
       const state: RateLimitState = {
         tokens: 5,
         lastRefill: now
@@ -416,7 +418,7 @@ describe('TokenBucket', () => {
       expect(nextTime).toBe(now);
     });
 
-    it('should calculate wait time when no tokens', () => {
+    test('should calculate wait time when no tokens', () => {
       const state: RateLimitState = {
         tokens: 0,
         lastRefill: now
@@ -428,7 +430,7 @@ describe('TokenBucket', () => {
   });
 
   describe('fromRule', () => {
-    it('should create bucket from rate limit rule', () => {
+    test('should create bucket from rate limit rule', () => {
       const rule = {
         max: 60,
         windowMs: 60_000,
@@ -578,6 +580,7 @@ export class QueueManager<T> {
 Create `tests/QueueManager.test.ts`:
 
 ```ts
+import { test, expect, describe, beforeEach } from 'bun:test';
 import pino from 'pino';
 import { QueueManager } from '../src/rate-limiting/QueueManager';
 import { QueuedTask } from '../src/types';
@@ -592,11 +595,11 @@ describe('QueueManager', () => {
   });
 
   describe('basic operations', () => {
-    it('should enqueue and dequeue tasks', () => {
+    test('should enqueue and dequeue tasks', () => {
       const task: QueuedTask<string> = {
         task: () => Promise.resolve('result'),
-        resolve: jest.fn(),
-        reject: jest.fn()
+        resolve: (() => {}),
+        reject: (() => {})
       };
 
       queueManager.enqueue(task);
@@ -607,22 +610,22 @@ describe('QueueManager', () => {
       expect(queueManager.size()).toBe(0);
     });
 
-    it('should reject tasks when queue is full', () => {
-      const mockReject = jest.fn();
+    test('should reject tasks when queue is full', () => {
+      const mockReject = (() => {});
       
       // Fill queue to capacity
       for (let i = 0; i < 5; i++) {
         queueManager.enqueue({
           task: () => Promise.resolve('result'),
-          resolve: jest.fn(),
-          reject: jest.fn()
+          resolve: (() => {}),
+          reject: (() => {})
         });
       }
 
       // Try to add one more
       queueManager.enqueue({
         task: () => Promise.resolve('result'),
-        resolve: jest.fn(),
+        resolve: (() => {}),
         reject: mockReject
       });
 
@@ -633,19 +636,19 @@ describe('QueueManager', () => {
       );
     });
 
-    it('should clear all tasks', () => {
-      const mockReject1 = jest.fn();
-      const mockReject2 = jest.fn();
+    test('should clear all tasks', () => {
+      const mockReject1 = (() => {});
+      const mockReject2 = (() => {});
 
       queueManager.enqueue({
         task: () => Promise.resolve('result'),
-        resolve: jest.fn(),
+        resolve: (() => {}),
         reject: mockReject1
       });
 
       queueManager.enqueue({
         task: () => Promise.resolve('result'),
-        resolve: jest.fn(),
+        resolve: (() => {}),
         reject: mockReject2
       });
 
@@ -666,23 +669,23 @@ describe('QueueManager', () => {
   });
 
   describe('processQueue', () => {
-    it('should process all tasks successfully', async () => {
-      const mockResolve1 = jest.fn();
-      const mockResolve2 = jest.fn();
+    test('should process all tasks successfully', async () => {
+      const mockResolve1 = (() => {});
+      const mockResolve2 = (() => {});
 
       queueManager.enqueue({
         task: () => Promise.resolve('result1'),
         resolve: mockResolve1,
-        reject: jest.fn()
+        reject: (() => {})
       });
 
       queueManager.enqueue({
         task: () => Promise.resolve('result2'),
         resolve: mockResolve2,
-        reject: jest.fn()
+        reject: (() => {})
       });
 
-      const processor = jest.fn().mockResolvedValue(true);
+      const processor = (() => {}).mockResolvedValue(true);
       
       await queueManager.processQueue(processor);
       
@@ -690,20 +693,20 @@ describe('QueueManager', () => {
       expect(queueManager.size()).toBe(0);
     });
 
-    it('should stop processing when processor returns false', async () => {
+    test('should stop processing when processor returns false', async () => {
       queueManager.enqueue({
         task: () => Promise.resolve('result1'),
-        resolve: jest.fn(),
-        reject: jest.fn()
+        resolve: (() => {}),
+        reject: (() => {})
       });
 
       queueManager.enqueue({
         task: () => Promise.resolve('result2'),
-        resolve: jest.fn(),
-        reject: jest.fn()
+        resolve: (() => {}),
+        reject: (() => {})
       });
 
-      const processor = jest.fn()
+      const processor = (() => {})
         .mockResolvedValueOnce(true)  // Process first task
         .mockResolvedValueOnce(false); // Stop at second task
       
@@ -713,13 +716,13 @@ describe('QueueManager', () => {
       expect(queueManager.size()).toBe(1); // One task remaining
     });
 
-    it('should not process concurrently', async () => {
+    test('should not process concurrently', async () => {
       let processingCount = 0;
       
       queueManager.enqueue({
         task: () => Promise.resolve('result'),
-        resolve: jest.fn(),
-        reject: jest.fn()
+        resolve: (() => {}),
+        reject: (() => {})
       });
 
       const processor = async () => {
@@ -1008,6 +1011,7 @@ export class DefaultRateLimiter implements RateLimiter {
 Create `tests/RateLimiter.test.ts`:
 
 ```ts
+import { test, expect, describe, beforeEach } from 'bun:test';
 import Keyv from 'keyv';
 import pino from 'pino';
 import { DefaultRateLimiter } from '../src/rate-limiting/RateLimiter';
@@ -1033,8 +1037,8 @@ describe('DefaultRateLimiter', () => {
   });
 
   describe('schedule with wait strategy', () => {
-    it('should execute task immediately when tokens available', async () => {
-      const task = jest.fn().mockResolvedValue('result');
+    test('should execute task immediately when tokens available', async () => {
+      const task = (() => {}).mockResolvedValue('result');
       
       const result = await rateLimiter.schedule('test-key', task);
       
@@ -1042,8 +1046,8 @@ describe('DefaultRateLimiter', () => {
       expect(task).toHaveBeenCalledTimes(1);
     });
 
-    it('should queue tasks when rate limited', async () => {
-      const task = jest.fn().mockResolvedValue('result');
+    test('should queue tasks when rate limited', async () => {
+      const task = (() => {}).mockResolvedValue('result');
       
       // Exhaust rate limit
       for (let i = 0; i < 5; i++) {
@@ -1068,14 +1072,14 @@ describe('DefaultRateLimiter', () => {
       expect(task).toHaveBeenCalledTimes(1);
     });
 
-    it('should handle endpoint-specific limits', async () => {
-      const task = jest.fn().mockResolvedValue('result');
+    test('should handle endpoint-specific limits', async () => {
+      const task = (() => {}).mockResolvedValue('result');
       
       // Use endpoint-specific limit (1 per 10 seconds)
       await rateLimiter.schedule('test-key', task, '/api/submit');
       
       // Second request should be queued
-      const secondTask = jest.fn().mockResolvedValue('result2');
+      const secondTask = (() => {}).mockResolvedValue('result2');
       const queuedPromise = rateLimiter.schedule('test-key', secondTask, '/api/submit');
       
       expect(secondTask).not.toHaveBeenCalled();
@@ -1097,8 +1101,8 @@ describe('DefaultRateLimiter', () => {
       rateLimiter = new DefaultRateLimiter(testRules, store, logger, 'throw');
     });
 
-    it('should throw when rate limited', async () => {
-      const task = jest.fn().mockResolvedValue('result');
+    test('should throw when rate limited', async () => {
+      const task = (() => {}).mockResolvedValue('result');
       
       // Exhaust rate limit
       for (let i = 0; i < 5; i++) {
@@ -1115,7 +1119,7 @@ describe('DefaultRateLimiter', () => {
   });
 
   describe('updateFromHeaders', () => {
-    it('should update rate limit state from Reddit headers', async () => {
+    test('should update rate limit state from Reddit headers', async () => {
       const headers = {
         'x-ratelimit-remaining': '30',
         'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 60),
@@ -1129,7 +1133,7 @@ describe('DefaultRateLimiter', () => {
       expect(state.resetAt).toBeDefined();
     });
 
-    it('should handle missing headers gracefully', async () => {
+    test('should handle missing headers gracefully', async () => {
       const headers = {
         'some-other-header': 'value'
       };
@@ -1141,14 +1145,14 @@ describe('DefaultRateLimiter', () => {
   });
 
   describe('state management', () => {
-    it('should get current state', async () => {
+    test('should get current state', async () => {
       const state = await rateLimiter.getState('test-key');
       
       expect(state.tokens).toBe(5); // Initial tokens = max
       expect(state.lastRefill).toBeDefined();
     });
 
-    it('should clear state', async () => {
+    test('should clear state', async () => {
       // Set some state
       await rateLimiter.schedule('test-key', () => Promise.resolve('result'));
       
@@ -1294,6 +1298,7 @@ export * from './validation';
 Create `tests/integration.test.ts`:
 
 ```ts
+import { test, expect, describe, beforeEach } from 'bun:test';
 import Keyv from 'keyv';
 import pino from 'pino';
 import { createRedditAuthInfrastructure } from '../src';
@@ -1321,7 +1326,7 @@ describe('Reddit Auth Infrastructure Integration', () => {
     };
   });
 
-  it('should create all components correctly', () => {
+  test('should create all components correctly', () => {
     const infrastructure = createRedditAuthInfrastructure(config);
     
     expect(infrastructure.authProvider).toBeDefined();
@@ -1330,7 +1335,7 @@ describe('Reddit Auth Infrastructure Integration', () => {
     expect(infrastructure.axios).toBeDefined();
   });
 
-  it('should validate configuration', () => {
+  test('should validate configuration', () => {
     const invalidConfig = {
       ...config,
       credentials: {
@@ -1345,7 +1350,7 @@ describe('Reddit Auth Infrastructure Integration', () => {
       .toThrow('Invalid configuration');
   });
 
-  it('should merge rate limit rules with defaults', () => {
+  test('should merge rate limit rules with defaults', () => {
     const customConfig = {
       ...config,
       rateLimiter: {
