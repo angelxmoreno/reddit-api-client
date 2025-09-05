@@ -75,7 +75,7 @@ class RedditHttpClient {
   async get(url: string, options?: RequestOptions) {
     const token = await this.authProvider.ensureValidToken();
     
-    return this.rateLimiter.schedule(this.getKey(), () => 
+    return this.rateLimiter.schedule(this.getRequestKey(), () => 
       this.axios.get(url, {
         ...options,
         headers: { 

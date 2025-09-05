@@ -32,8 +32,7 @@ This phase builds the fundamental authentication system for the Reddit API clien
 **Detailed Instructions**:
 
 ```bash
-# Initialize project
-cd /Users/amoreno/Projects/CuratedWordList/reddit-api-client
+# Initialize project (from repo root)
 npm init -y
 
 # Install runtime dependencies
@@ -191,7 +190,7 @@ export interface CredentialManager {
   clear(key: string): Promise<void>;
   cleanup(): Promise<void>;
   buildKey(config: CredentialConfig): string;
-  validateToken(token: StoredToken): Promise<boolean>;
+  validateToken(token: StoredToken, credentialType?: CredentialConfig['kind']): Promise<boolean>;
 }
 
 export interface AuthProvider {
@@ -647,6 +646,13 @@ export class DefaultCredentialManager implements CredentialManager {
     }
   }
 
+  protected extractCredentialTypeFromKey(key: string): CredentialConfig['kind'] | undefined {
+    if (key.includes(':app:')) return 'app';
+    if (key.includes(':user:')) return 'userTokens';  
+    if (key.includes(':pwd:')) return 'password';
+    return undefined;
+  }
+
   async get(key: string): Promise<StoredToken | null> {
     try {
       const token = await this.store.get(key);
@@ -656,7 +662,8 @@ export class DefaultCredentialManager implements CredentialManager {
         return null;
       }
 
-      if (!(await this.validateToken(token))) {
+      const credentialType = this.extractCredentialTypeFromKey(key);
+      if (!(await this.validateToken(token, credentialType))) {
         this.logger.warn({ key }, 'Found invalid token, clearing');
         await this.clear(key);
         return null;
@@ -709,14 +716,20 @@ export class DefaultCredentialManager implements CredentialManager {
     this.logger.debug('Token cleanup completed (TTL handled by Keyv)');
   }
 
-  async validateToken(token: StoredToken): Promise<boolean> {
+  async validateToken(token: StoredToken, credentialType?: CredentialConfig['kind']): Promise<boolean> {
     // First check structure
     if (!isValidTokenStructure(token)) {
       this.logger.debug('Token failed structure validation');
       return false;
     }
     
-    // Then verify with Reddit API
+    // For app-only tokens, skip live API validation as /api/v1/me requires user tokens
+    if (credentialType === 'app') {
+      this.logger.debug('Skipping live API validation for app-only token (structure validation passed)');
+      return true;
+    }
+    
+    // For user tokens, verify with Reddit API
     try {
       const response = await axios.get('https://oauth.reddit.com/api/v1/me', {
         headers: {
@@ -727,10 +740,10 @@ export class DefaultCredentialManager implements CredentialManager {
       });
       
       const isValid = response.status === 200;
-      this.logger.debug({ isValid }, 'Token API validation result');
+      this.logger.debug({ isValid, credentialType }, 'Token API validation result');
       return isValid;
     } catch (error) {
-      this.logger.debug({ error: error.message }, 'Token validation API call failed');
+      this.logger.debug({ error: error.message, credentialType }, 'Token validation API call failed');
       return false;
     }
   }

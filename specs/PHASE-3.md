@@ -732,6 +732,7 @@ export class RedditHttpClient implements HttpClient {
   protected contextManager: RequestContextManager;
   protected metricsCollector?: HttpMetricsCollector;
   protected retryHandler: RetryHandler;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(protected config: HttpClientConfig) {
     this.contextManager = new RequestContextManager();
@@ -745,10 +746,23 @@ export class RedditHttpClient implements HttpClient {
       config.logger
     );
 
-    // Set up periodic context cleanup
-    setInterval(() => {
+    // Set up periodic context cleanup with proper cleanup handling
+    this.cleanupInterval = setInterval(() => {
       this.contextManager.cleanup();
     }, 300000); // Clean up every 5 minutes
+  }
+
+  /**
+   * Dispose of resources and cleanup timers to prevent memory leaks
+   */
+  dispose(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+    
+    // Perform final cleanup
+    this.contextManager.cleanup();
   }
 
   async get<T = any>(url: string, options?: RequestOptions): Promise<T> {
@@ -796,7 +810,7 @@ export class RedditHttpClient implements HttpClient {
   }
 
   protected async executeRequest<T>(
-    context: any,
+    context: RequestContext,
     method: string,
     url: string,
     data?: any,
