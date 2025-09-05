@@ -1262,7 +1262,11 @@ export class PostAPI {
     if (submission.spoiler) formData.spoiler = true;
 
     try {
-      const response = await this.client.post('/api/submit', formData);
+      const response = await this.client.post(
+        '/api/submit',
+        new URLSearchParams(formData as Record<string, string>).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
       return RedditResponseParser.parseSubmissionResponse(response);
     } catch (error) {
       // Handle Reddit-specific submission errors
@@ -1321,7 +1325,11 @@ export class PostAPI {
       dir: direction
     };
 
-    await this.client.post('/api/vote', voteData);
+    await this.client.post(
+      '/api/vote',
+      new URLSearchParams(voteData as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1469,7 +1477,11 @@ export class PostAPI {
       dir: direction
     };
 
-    await this.client.post('/api/vote', voteData);
+    await this.client.post(
+      '/api/vote',
+      new URLSearchParams(voteData as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
