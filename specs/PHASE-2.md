@@ -802,7 +802,7 @@ export class DefaultRateLimiter implements RateLimiter {
     }
 
     // Queue the task for later execution
-    return this.queueTask(rateLimitKey, task, rule);
+    return this.queueTask(rateLimitKey, task, rule, endpoint);
   }
 
   async updateFromHeaders(
@@ -822,7 +822,7 @@ export class DefaultRateLimiter implements RateLimiter {
       }
       
       if (reset !== null) {
-        state.resetAt = reset * 1000; // Convert to milliseconds
+        state.resetAt = Date.now() + reset * 1000; // reset is seconds until reset, not epoch
       }
       
       state.lastRefill = Date.now();
@@ -909,13 +909,15 @@ export class DefaultRateLimiter implements RateLimiter {
   protected async queueTask<T>(
     rateLimitKey: string, 
     task: () => Promise<T>,
-    rule: RateLimitRule
+    rule: RateLimitRule,
+    endpoint?: string
   ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const queuedTask: QueuedTask<T> = {
         task,
         resolve,
-        reject
+        reject,
+        endpoint
       };
       
       const queue = this.getQueue(rateLimitKey);
@@ -923,26 +925,27 @@ export class DefaultRateLimiter implements RateLimiter {
       
       this.logger.debug({ 
         rateLimitKey, 
-        queueSize: queue.size() 
+        queueSize: queue.size(),
+        endpoint 
       }, 'Task queued due to rate limit');
       
       // Start processing the queue
-      this.processQueue(rateLimitKey);
+      this.processQueue(rateLimitKey, endpoint);
     });
   }
 
-  protected async processQueue(rateLimitKey: string): Promise<void> {
+  protected async processQueue(rateLimitKey: string, endpoint?: string): Promise<void> {
     const queue = this.getQueue(rateLimitKey);
     
     if (queue.isEmpty()) return;
     
-    const rule = this.getRule(); // Default to global rule for queue processing
-    const bucket = this.getBucket(rule);
-    
     await queue.processQueue(async (queuedTask) => {
       try {
-        const state = await this.getRateLimitState(rateLimitKey, rule);
-        const result = bucket.consume(state);
+        // Use the endpoint from the queued task, falling back to provided endpoint or global rule
+        const effRule = this.getRule(queuedTask.endpoint ?? endpoint);
+        const effBucket = this.getBucket(effRule);
+        const state = await this.getRateLimitState(rateLimitKey, effRule);
+        const result = effBucket.consume(state);
         
         if (result.allowed) {
           // Execute the task
@@ -952,10 +955,10 @@ export class DefaultRateLimiter implements RateLimiter {
           return true; // Continue processing
         } else {
           // Still rate limited, calculate delay and retry later
-          const waitTime = this.calculateWaitTime(result.state, rule);
+          const waitTime = this.calculateWaitTime(result.state, effRule);
           
           setTimeout(() => {
-            this.processQueue(rateLimitKey);
+            this.processQueue(rateLimitKey, queuedTask.endpoint ?? endpoint);
           }, waitTime);
           
           return false; // Stop processing for now
