@@ -1207,10 +1207,9 @@ export class DefaultAuthProvider implements AuthProvider {
     if (!token || isTokenExpiringSoon(token)) {
       this.logger.debug({ key, hasToken: !!token }, 'Token refresh needed');
       
-      // Use rate limiter for token refresh
-      this.refreshPromise = this.rateLimiter.schedule(key, async () => {
-        return this.refreshToken();
-      });
+      // Refresh tokens directly without API rate limiter to avoid deadlocks
+      // Token refresh hits reddit.com/api/v1/access_token, not oauth.reddit.com API
+      this.refreshPromise = this.refreshToken();
       
       try {
         token = await this.refreshPromise;
