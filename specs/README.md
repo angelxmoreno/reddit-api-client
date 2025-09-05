@@ -403,7 +403,12 @@ export class DefaultCredentialManager implements CredentialManager {
     
     if (!structureValid) return false;
     
-    // Live API validation
+    // Live API validation - skip for app-only tokens as /api/v1/me requires user tokens
+    if (credentialKind === 'app') {
+      this.logger.debug('Skipping live API validation for app-only token');
+      return true; // Rely on structure + TTL validation only
+    }
+    
     try {
       const response = await axios.get('https://oauth.reddit.com/api/v1/me', {
         headers: {
@@ -538,12 +543,14 @@ export class DefaultRateLimiter implements RateLimiter {
     const remaining = headers['x-ratelimit-remaining'];
     const reset = headers['x-ratelimit-reset'];
     
-    if (typeof remaining === 'number' && typeof reset === 'number') {
+    const remainingNum = Number(remaining);
+    const resetNum = Number(reset);
+    if (!Number.isNaN(remainingNum) && !Number.isNaN(resetNum)) {
       const rateLimitKey = this.buildRateLimitKey(key);
       const state: RateLimitState = {
-        tokens: remaining,
+        tokens: remainingNum,
         lastRefill: Date.now(),
-        resetAt: reset * 1000 // convert to ms
+        resetAt: Date.now() + resetNum * 1000 // reset is seconds until reset, not epoch
       };
       
       await this.saveRateLimitState(rateLimitKey, state);

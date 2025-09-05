@@ -198,6 +198,7 @@ export interface AuthProvider {
   getUserAgent(): string;
   checkScopes(required: string[]): Promise<boolean>;
   getConfig(): CredentialConfig;
+  getStorageKey(): string;
 }
 
 export interface RateLimiter {
