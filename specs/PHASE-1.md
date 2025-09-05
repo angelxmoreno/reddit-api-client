@@ -757,6 +757,7 @@ Create `tests/CredentialManager.test.ts`:
 ```ts
 import Keyv from 'keyv';
 import pino from 'pino';
+import axios from 'axios';
 import { DefaultCredentialManager } from '../src/storage/CredentialManager';
 import { StoredToken, CredentialConfig } from '../src/types';
 
@@ -1143,6 +1144,7 @@ Create `tests/AuthProvider.test.ts`:
 
 ```ts
 import pino from 'pino';
+import axios from 'axios';
 import { DefaultAuthProvider } from '../src/auth/AuthProvider';
 import { DefaultCredentialManager } from '../src/storage/CredentialManager';
 import { CredentialConfig, StoredToken } from '../src/types';
