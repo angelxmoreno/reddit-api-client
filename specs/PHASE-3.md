@@ -314,7 +314,7 @@ describe('RequestContextManager', () => {
   });
 
   describe('createContext', () => {
-    it('should create context with correct properties', () => {
+    test('should create context with correct properties', () => {
       const context = contextManager.createContext('GET', '/api/v1/me');
       
       expect(context.method).toBe('GET');
@@ -325,26 +325,26 @@ describe('RequestContextManager', () => {
       expect(context.retryCount).toBe(0);
     });
 
-    it('should extract endpoint from Reddit API URLs', () => {
+    test('should extract endpoint from Reddit API URLs', () => {
       const context = contextManager.createContext('POST', '/api/submit');
       expect(context.endpoint).toBe('/api/submit');
     });
 
-    it('should normalize method to uppercase', () => {
+    test('should normalize method to uppercase', () => {
       const context = contextManager.createContext('post', '/api/submit');
       expect(context.method).toBe('POST');
     });
   });
 
   describe('context management', () => {
-    it('should store and retrieve contexts', () => {
+    test('should store and retrieve contexts', () => {
       const context = contextManager.createContext('GET', '/test');
       const retrieved = contextManager.getContext(context.requestId);
       
       expect(retrieved).toBe(context);
     });
 
-    it('should update contexts', () => {
+    test('should update contexts', () => {
       const context = contextManager.createContext('GET', '/test');
       const updated = contextManager.updateContext(context.requestId, { retryCount: 1 });
       
@@ -352,7 +352,7 @@ describe('RequestContextManager', () => {
       expect(updated?.requestId).toBe(context.requestId);
     });
 
-    it('should remove contexts', () => {
+    test('should remove contexts', () => {
       const context = contextManager.createContext('GET', '/test');
       contextManager.removeContext(context.requestId);
       
@@ -362,7 +362,7 @@ describe('RequestContextManager', () => {
   });
 
   describe('createResponseContext', () => {
-    it('should create response context with timing info', () => {
+    test('should create response context with timing info', () => {
       const requestContext = contextManager.createContext('GET', '/test');
       
       // Simulate some time passing
@@ -580,12 +580,12 @@ describe('RetryHandler', () => {
       retryCount: 0
     };
     
-    updateContext = jest.fn();
+    updateContext = (() => {});
   });
 
   describe('executeWithRetry', () => {
-    it('should succeed on first attempt', async () => {
-      const operation = jest.fn().mockResolvedValue('success');
+    test('should succeed on first attempt', async () => {
+      const operation = (() => {}).mockResolvedValue('success');
       
       const result = await retryHandler.executeWithRetry(context, operation, updateContext);
       
@@ -594,13 +594,13 @@ describe('RetryHandler', () => {
       expect(updateContext).not.toHaveBeenCalled();
     });
 
-    it('should retry on retryable errors', async () => {
+    test('should retry on retryable errors', async () => {
       const retryableError = { 
         response: { status: 500 },
         message: 'Internal Server Error'
       };
       
-      const operation = jest.fn()
+      const operation = (() => {})
         .mockRejectedValueOnce(retryableError)
         .mockRejectedValueOnce(retryableError)
         .mockResolvedValue('success');
@@ -613,13 +613,13 @@ describe('RetryHandler', () => {
       expect(updateContext).toHaveBeenCalledWith({ retryCount: 2 });
     });
 
-    it('should not retry non-retryable errors', async () => {
+    test('should not retry non-retryable errors', async () => {
       const nonRetryableError = { 
         response: { status: 400 },
         message: 'Bad Request'
       };
       
-      const operation = jest.fn().mockRejectedValue(nonRetryableError);
+      const operation = (() => {}).mockRejectedValue(nonRetryableError);
       
       await expect(retryHandler.executeWithRetry(context, operation, updateContext))
         .rejects.toBe(nonRetryableError);
@@ -628,13 +628,13 @@ describe('RetryHandler', () => {
       expect(updateContext).not.toHaveBeenCalled();
     });
 
-    it('should exhaust retries and throw last error', async () => {
+    test('should exhaust retries and throw last error', async () => {
       const retryableError = { 
         response: { status: 500 },
         message: 'Internal Server Error'
       };
       
-      const operation = jest.fn().mockRejectedValue(retryableError);
+      const operation = (() => {}).mockRejectedValue(retryableError);
       
       await expect(retryHandler.executeWithRetry(context, operation, updateContext))
         .rejects.toBe(retryableError);
@@ -642,7 +642,7 @@ describe('RetryHandler', () => {
       expect(operation).toHaveBeenCalledTimes(3); // 1 initial + 2 retries
     });
 
-    it('should respect Retry-After header', async () => {
+    test('should respect Retry-After header', async () => {
       const errorWithRetryAfter = {
         response: { 
           status: 429,
@@ -651,7 +651,7 @@ describe('RetryHandler', () => {
         message: 'Rate Limited'
       };
       
-      const operation = jest.fn()
+      const operation = (() => {})
         .mockRejectedValueOnce(errorWithRetryAfter)
         .mockResolvedValue('success');
       
@@ -665,7 +665,7 @@ describe('RetryHandler', () => {
   });
 
   describe('isRetryableError', () => {
-    it('should identify retryable network errors', () => {
+    test('should identify retryable network errors', () => {
       const networkErrors = [
         { code: 'ECONNRESET' },
         { code: 'ECONNABORTED' },
@@ -677,7 +677,7 @@ describe('RetryHandler', () => {
       });
     });
 
-    it('should identify retryable HTTP status codes', () => {
+    test('should identify retryable HTTP status codes', () => {
       const retryableStatuses = [429, 500, 502, 503, 504, 408];
 
       retryableStatuses.forEach(status => {
@@ -686,7 +686,7 @@ describe('RetryHandler', () => {
       });
     });
 
-    it('should identify non-retryable HTTP status codes', () => {
+    test('should identify non-retryable HTTP status codes', () => {
       const nonRetryableStatuses = [400, 401, 403, 404];
 
       nonRetryableStatuses.forEach(status => {
@@ -949,20 +949,18 @@ export class RedditHttpClient implements HttpClient {
 Create `tests/RedditHttpClient.test.ts`:
 
 ```ts
+import { test, expect, describe, beforeEach, mock } from 'bun:test';
 import axios from 'axios';
+import MockAdapter from 'axios-mock-adapter';
 import pino from 'pino';
 import { RedditHttpClient } from '../src/http/RedditHttpClient';
 import { AuthProvider, RateLimiter, StoredToken } from '../src/types';
 
-// Mock dependencies
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
-
 describe('RedditHttpClient', () => {
   let httpClient: RedditHttpClient;
-  let mockAuthProvider: jest.Mocked<AuthProvider>;
-  let mockRateLimiter: jest.Mocked<RateLimiter>;
-  let mockAxios: jest.Mocked<any>;
+  let mockAuthProvider: Mocked<AuthProvider>;
+  let mockRateLimiter: Mocked<RateLimiter>;
+  let mockAxios: Mocked<any>;
   let logger: pino.Logger;
 
   const mockToken: StoredToken = {
@@ -977,21 +975,21 @@ describe('RedditHttpClient', () => {
     logger = pino({ level: 'silent' });
     
     mockAuthProvider = {
-      ensureValidToken: jest.fn().mockResolvedValue(mockToken),
-      getUserAgent: jest.fn().mockReturnValue('test-app/1.0'),
-      getConfig: jest.fn().mockReturnValue({ clientId: 'test-client' }),
-      checkScopes: jest.fn().mockResolvedValue(true)
+      ensureValidToken: (() => {}).mockResolvedValue(mockToken),
+      getUserAgent: (() => {}).mockReturnValue('test-app/1.0'),
+      getConfig: (() => {}).mockReturnValue({ clientId: 'test-client' }),
+      checkScopes: (() => {}).mockResolvedValue(true)
     } as any;
 
     mockRateLimiter = {
-      schedule: jest.fn().mockImplementation((key, task) => task()),
-      updateFromHeaders: jest.fn().mockResolvedValue(undefined),
-      getState: jest.fn(),
-      clearState: jest.fn()
+      schedule: (() => {}).mockImplementation((key, task) => task()),
+      updateFromHeaders: (() => {}).mockResolvedValue(undefined),
+      getState: (() => {}),
+      clearState: (() => {})
     } as any;
 
     mockAxios = {
-      request: jest.fn().mockResolvedValue({
+      request: (() => {}).mockResolvedValue({
         data: { test: 'data' },
         status: 200,
         headers: {}
@@ -1008,7 +1006,7 @@ describe('RedditHttpClient', () => {
   });
 
   describe('HTTP methods', () => {
-    it('should make GET request successfully', async () => {
+    test('should make GET request successfully', async () => {
       const result = await httpClient.get('/api/v1/me');
       
       expect(result).toEqual({ test: 'data' });
@@ -1026,7 +1024,7 @@ describe('RedditHttpClient', () => {
       );
     });
 
-    it('should make POST request with data', async () => {
+    test('should make POST request with data', async () => {
       const postData = { title: 'Test Post', text: 'Test content' };
       
       await httpClient.post('/api/submit', postData);
@@ -1043,7 +1041,7 @@ describe('RedditHttpClient', () => {
       );
     });
 
-    it('should include custom headers from options', async () => {
+    test('should include custom headers from options', async () => {
       await httpClient.get('/test', {
         headers: { 'Custom-Header': 'value' }
       });
@@ -1059,7 +1057,7 @@ describe('RedditHttpClient', () => {
   });
 
   describe('error handling', () => {
-    it('should handle 401 authentication errors', async () => {
+    test('should handle 401 authentication errors', async () => {
       const authError = {
         response: { status: 401 },
         message: 'Unauthorized'
@@ -1074,7 +1072,7 @@ describe('RedditHttpClient', () => {
         });
     });
 
-    it('should handle 403 scope errors', async () => {
+    test('should handle 403 scope errors', async () => {
       const scopeError = {
         response: { status: 403 },
         message: 'Forbidden'
@@ -1088,7 +1086,7 @@ describe('RedditHttpClient', () => {
         });
     });
 
-    it('should handle 429 rate limit errors', async () => {
+    test('should handle 429 rate limit errors', async () => {
       const rateLimitError = {
         response: { 
           status: 429,
@@ -1108,7 +1106,7 @@ describe('RedditHttpClient', () => {
   });
 
   describe('rate limiting integration', () => {
-    it('should schedule requests through rate limiter', async () => {
+    test('should schedule requests through rate limiter', async () => {
       await httpClient.get('/api/submit');
       
       expect(mockRateLimiter.schedule).toHaveBeenCalledWith(
@@ -1118,7 +1116,7 @@ describe('RedditHttpClient', () => {
       );
     });
 
-    it('should update rate limiter from response headers', async () => {
+    test('should update rate limiter from response headers', async () => {
       mockAxios.request.mockResolvedValue({
         data: {},
         status: 200,
@@ -1141,7 +1139,7 @@ describe('RedditHttpClient', () => {
   });
 
   describe('metrics', () => {
-    it('should collect request metrics', async () => {
+    test('should collect request metrics', async () => {
       await httpClient.get('/test');
       
       const metrics = httpClient.getMetrics();
@@ -1149,7 +1147,7 @@ describe('RedditHttpClient', () => {
       expect(metrics?.errorCount).toBe(0);
     });
 
-    it('should collect error metrics', async () => {
+    test('should collect error metrics', async () => {
       mockAxios.request.mockRejectedValue(new Error('Network error'));
       
       try {
@@ -1412,7 +1410,7 @@ describe('Full Integration Test', () => {
     };
   });
 
-  it('should create HTTP client with all components wired correctly', () => {
+  test('should create HTTP client with all components wired correctly', () => {
     const client = createRedditClient(config);
     
     expect(client).toBeDefined();
@@ -1421,7 +1419,7 @@ describe('Full Integration Test', () => {
     expect(typeof client.getMetrics).toBe('function');
   });
 
-  it('should create full factory with all components', () => {
+  test('should create full factory with all components', () => {
     const factory = createRedditHttpClient(config);
     
     expect(factory.httpClient).toBeDefined();
@@ -1430,7 +1428,7 @@ describe('Full Integration Test', () => {
     expect(factory.credentialManager).toBeDefined();
   });
 
-  it('should validate configuration before creation', () => {
+  test('should validate configuration before creation', () => {
     const invalidConfig = {
       ...config,
       credentials: {
@@ -1445,7 +1443,7 @@ describe('Full Integration Test', () => {
       .toThrow('Invalid configuration');
   });
 
-  it('should use default values for optional configuration', () => {
+  test('should use default values for optional configuration', () => {
     const minimalConfig = {
       credentials: config.credentials,
       storage: config.storage,

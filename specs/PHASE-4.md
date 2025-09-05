@@ -248,10 +248,11 @@ export interface SubmissionResponse {
 Create `tests/reddit-types.test.ts`:
 
 ```ts
+import { test, expect, describe } from 'bun:test';
 import { RedditListing, Post, Comment, User } from '../src/reddit/types';
 
 describe('Reddit Types', () => {
-  it('should properly type Reddit listings', () => {
+  test('should properly type Reddit listings', () => {
     const listing: RedditListing<Post> = {
       kind: "Listing",
       data: {
@@ -267,7 +268,7 @@ describe('Reddit Types', () => {
     expect(Array.isArray(listing.data.children)).toBe(true);
   });
 
-  it('should handle post data correctly', () => {
+  test('should handle post data correctly', () => {
     const post: Post = {
       id: 'test123',
       name: 't3_test123',
@@ -665,7 +666,7 @@ import { RedditListing, Post } from '../src/reddit/types';
 
 describe('RedditResponseParser', () => {
   describe('parseResponse', () => {
-    it('should parse wrapped responses', () => {
+    test('should parse wrapped responses', () => {
       const response = {
         kind: 't3',
         data: { id: 'test123', title: 'Test Post' }
@@ -675,7 +676,7 @@ describe('RedditResponseParser', () => {
       expect(parsed).toEqual({ id: 'test123', title: 'Test Post' });
     });
 
-    it('should parse direct data responses', () => {
+    test('should parse direct data responses', () => {
       const response = {
         data: { id: 'test123', title: 'Test Post' }
       };
@@ -686,7 +687,7 @@ describe('RedditResponseParser', () => {
   });
 
   describe('parseListing', () => {
-    it('should parse listing responses', () => {
+    test('should parse listing responses', () => {
       const listing: RedditListing<Post> = {
         kind: 'Listing',
         data: {
@@ -708,7 +709,7 @@ describe('RedditResponseParser', () => {
   });
 
   describe('extractListingItems', () => {
-    it('should extract items from listing', () => {
+    test('should extract items from listing', () => {
       const listing: RedditListing<Post> = {
         kind: 'Listing',
         data: {
@@ -731,19 +732,19 @@ describe('RedditResponseParser', () => {
   });
 
   describe('parseFullname', () => {
-    it('should parse valid fullnames', () => {
+    test('should parse valid fullnames', () => {
       const result = RedditResponseParser.parseFullname('t3_abc123');
       expect(result).toEqual({ type: 't3', id: 'abc123' });
     });
 
-    it('should throw on invalid fullnames', () => {
+    test('should throw on invalid fullnames', () => {
       expect(() => RedditResponseParser.parseFullname('invalid'))
         .toThrow('Invalid fullname format');
     });
   });
 
   describe('createFullname', () => {
-    it('should create valid fullnames', () => {
+    test('should create valid fullnames', () => {
       const fullname = RedditResponseParser.createFullname('t3', 'abc123');
       expect(fullname).toBe('t3_abc123');
     });
@@ -1059,7 +1060,7 @@ describe('SubredditAPI', () => {
       user_is_contributor: false
     };
 
-    it('should get subreddit information', async () => {
+    test('should get subreddit information', async () => {
       mockHttpClient.get.mockResolvedValue({
         kind: 't5',
         data: mockSubreddit
@@ -1071,7 +1072,7 @@ describe('SubredditAPI', () => {
       expect(result).toEqual(mockSubreddit);
     });
 
-    it('should handle subreddit names with r/ prefix', async () => {
+    test('should handle subreddit names with r/ prefix', async () => {
       mockHttpClient.get.mockResolvedValue({
         kind: 't5',
         data: mockSubreddit
@@ -1082,7 +1083,7 @@ describe('SubredditAPI', () => {
       expect(mockHttpClient.get).toHaveBeenCalledWith('/r/javascript/about');
     });
 
-    it('should throw on invalid subreddit names', async () => {
+    test('should throw on invalid subreddit names', async () => {
       await expect(subredditAPI.getSubreddit('invalid name!'))
         .rejects.toThrow('Invalid subreddit name');
     });
@@ -1103,7 +1104,7 @@ describe('SubredditAPI', () => {
       }
     };
 
-    it('should get hot posts', async () => {
+    test('should get hot posts', async () => {
       mockHttpClient.get.mockResolvedValue(mockListing);
 
       const result = await subredditAPI.getHotPosts('javascript');
@@ -1113,7 +1114,7 @@ describe('SubredditAPI', () => {
       expect(result.pagination.after).toBe('abc123');
     });
 
-    it('should handle pagination options', async () => {
+    test('should handle pagination options', async () => {
       mockHttpClient.get.mockResolvedValue(mockListing);
 
       await subredditAPI.getHotPosts('javascript', { limit: 10, after: 'xyz789' });
@@ -1125,7 +1126,7 @@ describe('SubredditAPI', () => {
   });
 
   describe('search', () => {
-    it('should search within subreddit', async () => {
+    test('should search within subreddit', async () => {
       const mockListing: RedditListing<Post> = {
         kind: 'Listing',
         data: {
@@ -1153,7 +1154,7 @@ describe('SubredditAPI', () => {
   });
 
   describe('subscribe/unsubscribe', () => {
-    it('should subscribe to subreddit', async () => {
+    test('should subscribe to subreddit', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await subredditAPI.subscribe('javascript');
@@ -1164,7 +1165,7 @@ describe('SubredditAPI', () => {
       });
     });
 
-    it('should unsubscribe from subreddit', async () => {
+    test('should unsubscribe from subreddit', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await subredditAPI.unsubscribe('javascript');
@@ -1602,7 +1603,7 @@ describe('PostAPI', () => {
   });
 
   describe('createPost', () => {
-    it('should create a self post', async () => {
+    test('should create a self post', async () => {
       const submission: PostSubmission = {
         kind: 'self',
         sr: 'test',
@@ -1640,7 +1641,7 @@ describe('PostAPI', () => {
       expect(result.id).toBe('abc123');
     });
 
-    it('should create a link post', async () => {
+    test('should create a link post', async () => {
       const submission: PostSubmission = {
         kind: 'link',
         sr: 'test',
@@ -1671,7 +1672,7 @@ describe('PostAPI', () => {
       );
     });
 
-    it('should throw on invalid title', async () => {
+    test('should throw on invalid title', async () => {
       const submission: PostSubmission = {
         kind: 'self',
         sr: 'test',
@@ -1685,7 +1686,7 @@ describe('PostAPI', () => {
   });
 
   describe('getPost', () => {
-    it('should get post with comments', async () => {
+    test('should get post with comments', async () => {
       const mockResponse = [
         {
           kind: 'Listing',
@@ -1726,7 +1727,7 @@ describe('PostAPI', () => {
   });
 
   describe('voting', () => {
-    it('should upvote a post', async () => {
+    test('should upvote a post', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await postAPI.upvote('abc123');
@@ -1737,7 +1738,7 @@ describe('PostAPI', () => {
       });
     });
 
-    it('should downvote a post', async () => {
+    test('should downvote a post', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await postAPI.downvote('abc123');
@@ -1748,7 +1749,7 @@ describe('PostAPI', () => {
       });
     });
 
-    it('should remove vote from a post', async () => {
+    test('should remove vote from a post', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await postAPI.unvote('abc123');
@@ -1761,7 +1762,7 @@ describe('PostAPI', () => {
   });
 
   describe('comments', () => {
-    it('should create a comment', async () => {
+    test('should create a comment', async () => {
       const mockResponse = {
         json: {
           errors: [],
@@ -1787,7 +1788,7 @@ describe('PostAPI', () => {
       expect(result.id).toBe('comment123');
     });
 
-    it('should reply to a comment', async () => {
+    test('should reply to a comment', async () => {
       const mockResponse = {
         json: {
           errors: [],
@@ -1813,7 +1814,7 @@ describe('PostAPI', () => {
   });
 
   describe('save/unsave', () => {
-    it('should save a post', async () => {
+    test('should save a post', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await postAPI.save('abc123');
@@ -1823,7 +1824,7 @@ describe('PostAPI', () => {
       });
     });
 
-    it('should unsave a post', async () => {
+    test('should unsave a post', async () => {
       mockHttpClient.post.mockResolvedValue({});
 
       await postAPI.unsave('abc123');
@@ -2384,7 +2385,7 @@ describe('RedditApiClient', () => {
     };
   });
 
-  it('should create client with all API modules', () => {
+  test('should create client with all API modules', () => {
     const client = new RedditApiClient(config);
     
     expect(client.subreddits).toBeDefined();
@@ -2392,7 +2393,7 @@ describe('RedditApiClient', () => {
     expect(client.users).toBeDefined();
   });
 
-  it('should provide access to HTTP client', () => {
+  test('should provide access to HTTP client', () => {
     const client = new RedditApiClient(config);
     const httpClient = client.getHttpClient();
     
@@ -2400,7 +2401,7 @@ describe('RedditApiClient', () => {
     expect(typeof httpClient.get).toBe('function');
   });
 
-  it('should support custom requests', async () => {
+  test('should support custom requests', async () => {
     const client = new RedditApiClient(config);
     
     // Mock the HTTP client
@@ -2411,7 +2412,7 @@ describe('RedditApiClient', () => {
     expect(result).toEqual({ test: 'data' });
   });
 
-  it('should support metrics access', () => {
+  test('should support metrics access', () => {
     const client = new RedditApiClient(config);
     
     expect(typeof client.getMetrics).toBe('function');
