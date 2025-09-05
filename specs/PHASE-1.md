@@ -42,7 +42,7 @@ npm install zod
 npm install axios keyv pino
 
 # Install dev dependencies
-npm install -D typescript @types/node @types/axios jest @types/jest ts-jest
+npm install -D typescript @types/node @types/axios axios-mock-adapter
 
 # Initialize TypeScript config
 npx tsc --init
@@ -283,24 +283,25 @@ export class AuthErrors {
 Create `tests/errors.test.ts`:
 
 ```ts
+import { test, expect, describe } from 'bun:test';
 import { AuthErrors } from '../src/errors';
 
 describe('AuthErrors', () => {
-  it('should create auth failed error', () => {
+  test('should create auth failed error', () => {
     const error = AuthErrors.authFailed('Authentication failed');
     expect(error.kind).toBe('auth_failed');
     expect(error.retryable).toBe(false);
     expect(error.message).toBe('Authentication failed');
   });
 
-  it('should create rate limited error with retry after', () => {
+  test('should create rate limited error with retry after', () => {
     const error = AuthErrors.rateLimited('Rate limited', true, 60);
     expect(error.kind).toBe('rate_limited');
     expect(error.retryable).toBe(true);
     expect(error.retryAfter).toBe(60);
   });
 
-  it('should create scope insufficient error', () => {
+  test('should create scope insufficient error', () => {
     const error = AuthErrors.scopeInsufficient(['submit'], ['read']);
     expect(error.kind).toBe('scope_insufficient');
     expect(error.retryable).toBe(false);
@@ -416,10 +417,11 @@ export class CredentialConfigValidator {
 Create `tests/validation.test.ts`:
 
 ```ts
+import { test, expect, describe } from 'bun:test';
 import { CredentialConfigValidator } from '../src/validation';
 
 describe('CredentialConfigValidator', () => {
-  it('should validate app-only config', () => {
+  test('should validate app-only config', () => {
     const config = {
       kind: "app",
       clientId: "test-client",
@@ -431,7 +433,7 @@ describe('CredentialConfigValidator', () => {
     expect(result.valid).toBe(true);
   });
 
-  it('should reject invalid config', () => {
+  test('should reject invalid config', () => {
     const config = {
       kind: "app",
       clientId: "", // Invalid: empty string
@@ -444,7 +446,7 @@ describe('CredentialConfigValidator', () => {
     expect(result.errors).toContain('clientId: Client ID is required');
   });
 
-  it('should validate user tokens config', () => {
+  test('should validate user tokens config', () => {
     const config = {
       kind: "userTokens",
       clientId: "test-client",
@@ -541,10 +543,11 @@ export function isValidTokenStructure(token: any): boolean {
 Create `tests/utils.test.ts`:
 
 ```ts
+import { test, expect, describe } from 'bun:test';
 import { shortHash, randomString, isTokenExpiringSoon, calculateTokenTTL, extractEndpoint, isValidTokenStructure } from '../src/utils';
 
 describe('Utils', () => {
-  it('should create consistent short hashes', () => {
+  test('should create consistent short hashes', () => {
     const input = "test-string";
     const hash1 = shortHash(input);
     const hash2 = shortHash(input);
@@ -554,7 +557,7 @@ describe('Utils', () => {
     expect(hash1).toMatch(/^[a-f0-9]{12}$/);
   });
 
-  it('should generate random strings', () => {
+  test('should generate random strings', () => {
     const str1 = randomString();
     const str2 = randomString();
     
@@ -562,7 +565,7 @@ describe('Utils', () => {
     expect(str1).toHaveLength(32); // 16 bytes = 32 hex chars
   });
 
-  it('should detect expiring tokens', () => {
+  test('should detect expiring tokens', () => {
     const now = Date.now();
     const expiringToken = {
       received_at: now,
@@ -577,20 +580,20 @@ describe('Utils', () => {
     expect(isTokenExpiringSoon(validToken)).toBe(false);
   });
 
-  it('should calculate token TTL', () => {
+  test('should calculate token TTL', () => {
     const expiresIn = 3600; // 1 hour
     const ttl = calculateTokenTTL(expiresIn);
     
     expect(ttl).toBe(3600 * 1000 - 60_000); // 1 hour minus 1 minute
   });
 
-  it('should extract endpoints from URLs', () => {
+  test('should extract endpoints from URLs', () => {
     expect(extractEndpoint('/api/submit')).toBe('/api/submit');
     expect(extractEndpoint('/r/javascript/about')).toBeUndefined();
     expect(extractEndpoint('/api/vote')).toBe('/api/vote');
   });
 
-  it('should validate token structure', () => {
+  test('should validate token structure', () => {
     const validToken = {
       access_token: "token",
       token_type: "bearer",
@@ -761,23 +764,26 @@ import axios from 'axios';
 import { DefaultCredentialManager } from '../src/storage/CredentialManager';
 import { StoredToken, CredentialConfig } from '../src/types';
 
-// Mock axios for token validation
-jest.mock('axios');
-const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('DefaultCredentialManager', () => {
   let store: Keyv<StoredToken>;
   let logger: pino.Logger;
   let credentialManager: DefaultCredentialManager;
+  let mockAxios: MockAdapter;
 
   beforeEach(() => {
     store = new Keyv();
     logger = pino({ level: 'silent' }); // Silent for tests
     credentialManager = new DefaultCredentialManager(store, logger);
+    mockAxios = new MockAdapter(axios);
+  });
+
+  afterEach(() => {
+    mockAxios.restore();
   });
 
   describe('buildKey', () => {
-    it('should build app key correctly', () => {
+    test('should build app key correctly', () => {
       const config: CredentialConfig = {
         kind: 'app',
         clientId: 'test-client',
@@ -789,7 +795,7 @@ describe('DefaultCredentialManager', () => {
       expect(key).toBe('reddit:token:app:test-client');
     });
 
-    it('should build user key with username hint', () => {
+    test('should build user key with username hint', () => {
       const config: CredentialConfig = {
         kind: 'userTokens',
         clientId: 'test-client',
@@ -805,7 +811,7 @@ describe('DefaultCredentialManager', () => {
       expect(key).toBe('reddit:token:user:test-client:testuser');
     });
 
-    it('should build user key with refresh token hash when no username hint', () => {
+    test('should build user key with refresh token hash when no username hint', () => {
       const config: CredentialConfig = {
         kind: 'userTokens',
         clientId: 'test-client',
@@ -835,7 +841,7 @@ describe('DefaultCredentialManager', () => {
       mockedAxios.get.mockResolvedValue({ status: 200, data: {} });
     });
 
-    it('should store and retrieve token', async () => {
+    test('should store and retrieve token', async () => {
       const key = 'test-key';
       
       await credentialManager.set(key, validToken);
@@ -844,12 +850,12 @@ describe('DefaultCredentialManager', () => {
       expect(retrieved).toEqual(validToken);
     });
 
-    it('should return null for non-existent token', async () => {
+    test('should return null for non-existent token', async () => {
       const retrieved = await credentialManager.get('non-existent');
       expect(retrieved).toBeNull();
     });
 
-    it('should clear token', async () => {
+    test('should clear token', async () => {
       const key = 'test-key';
       
       await credentialManager.set(key, validToken);
@@ -859,7 +865,7 @@ describe('DefaultCredentialManager', () => {
       expect(retrieved).toBeNull();
     });
 
-    it('should clear invalid token automatically', async () => {
+    test('should clear invalid token automatically', async () => {
       const key = 'test-key';
       
       // Mock failed token validation
@@ -873,7 +879,7 @@ describe('DefaultCredentialManager', () => {
   });
 
   describe('validateToken', () => {
-    it('should validate correct token structure', async () => {
+    test('should validate correct token structure', async () => {
       const validToken: StoredToken = {
         access_token: 'test-token',
         token_type: 'bearer',
@@ -888,7 +894,7 @@ describe('DefaultCredentialManager', () => {
       expect(isValid).toBe(true);
     });
 
-    it('should reject invalid token structure', async () => {
+    test('should reject invalid token structure', async () => {
       const invalidToken = {
         access_token: 'test-token',
         // Missing required fields
@@ -898,7 +904,7 @@ describe('DefaultCredentialManager', () => {
       expect(isValid).toBe(false);
     });
 
-    it('should reject token that fails API validation', async () => {
+    test('should reject token that fails API validation', async () => {
       const validToken: StoredToken = {
         access_token: 'test-token',
         token_type: 'bearer',
@@ -1186,7 +1192,7 @@ describe('DefaultAuthProvider', () => {
       received_at: Date.now()
     };
 
-    it('should return existing valid token', async () => {
+    test('should return existing valid token', async () => {
       mockCredentialManager.buildKey.mockReturnValue('test-key');
       mockCredentialManager.get.mockResolvedValue(validToken);
 
@@ -1196,7 +1202,7 @@ describe('DefaultAuthProvider', () => {
       expect(mockCredentialManager.get).toHaveBeenCalledWith('test-key');
     });
 
-    it('should refresh expired token', async () => {
+    test('should refresh expired token', async () => {
       const expiredToken: StoredToken = {
         ...validToken,
         received_at: Date.now() - 3600000, // 1 hour ago
@@ -1223,7 +1229,7 @@ describe('DefaultAuthProvider', () => {
       expect(mockCredentialManager.set).toHaveBeenCalled();
     });
 
-    it('should handle concurrent refresh requests', async () => {
+    test('should handle concurrent refresh requests', async () => {
       mockCredentialManager.buildKey.mockReturnValue('test-key');
       mockCredentialManager.get.mockResolvedValue(null); // No token
       mockCredentialManager.set.mockResolvedValue();
@@ -1254,7 +1260,7 @@ describe('DefaultAuthProvider', () => {
   });
 
   describe('checkScopes', () => {
-    it('should pass when token has required scopes', async () => {
+    test('should pass when token has required scopes', async () => {
       const tokenWithScopes: StoredToken = {
         access_token: 'test-token',
         token_type: 'bearer',
@@ -1270,7 +1276,7 @@ describe('DefaultAuthProvider', () => {
       expect(hasScopes).toBe(true);
     });
 
-    it('should throw when token lacks required scopes', async () => {
+    test('should throw when token lacks required scopes', async () => {
       const tokenWithLimitedScopes: StoredToken = {
         access_token: 'test-token',
         token_type: 'bearer',
@@ -1290,7 +1296,7 @@ describe('DefaultAuthProvider', () => {
   });
 
   describe('fetchAppToken', () => {
-    it('should fetch app token successfully', async () => {
+    test('should fetch app token successfully', async () => {
       mockCredentialManager.buildKey.mockReturnValue('test-key');
       mockCredentialManager.set.mockResolvedValue();
 
