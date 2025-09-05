@@ -210,7 +210,7 @@ export class RequestContextManager {
 
 ```ts
 import * as pino from 'pino';
-import { HttpMetrics, ResponseContext } from '../types';
+import { HttpMetrics, ResponseContext, RequestContext } from '../types';
 
 export class HttpMetricsCollector {
   protected metrics: HttpMetrics = {
@@ -926,8 +926,8 @@ export class RedditHttpClient implements HttpClient {
   }
 
   protected buildRequestKey(): string {
-    // Use the auth provider's credential manager to build a consistent key
-    return this.config.authProvider.getConfig().clientId || 'default';
+    // Use the auth provider's storage key to prevent cross-user collisions
+    return this.config.authProvider.getStorageKey();
   }
 
   // Public methods for monitoring and management
