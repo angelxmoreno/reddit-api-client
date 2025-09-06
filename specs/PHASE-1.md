@@ -984,6 +984,10 @@ export class DefaultAuthProvider implements AuthProvider {
     return this.cfg;
   }
 
+  getStorageKey(): string {
+    return this.cm.buildKey(this.cfg);
+  }
+
   async checkScopes(required: string[]): Promise<boolean> {
     try {
       const token = await this.ensureValidToken();

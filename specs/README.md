@@ -466,6 +466,14 @@ export class DefaultAuthProvider implements AuthProvider {
     return this.cfg.userAgent;
   }
 
+  getConfig(): CredentialConfig {
+    return this.cfg;
+  }
+
+  getStorageKey(): string {
+    return this.cm.buildKey(this.cfg);
+  }
+
   async checkScopes(required: string[]): Promise<boolean> {
     const token = await this.ensureValidToken();
     if (!token?.scope) return false;
@@ -608,7 +616,7 @@ export class RedditHttpClient {
       // Update rate limits from response headers
       await this.rateLimiter.updateFromHeaders(key, response.headers);
       
-      return response;
+      return response.data;
     }, endpoint);
   }
 

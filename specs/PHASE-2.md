@@ -1225,7 +1225,43 @@ export class DefaultAuthProvider implements AuthProvider {
     return token;
   }
 
-  // Rest of the class remains the same...
+  getUserAgent(): string {
+    return this.cfg.userAgent;
+  }
+
+  getConfig(): CredentialConfig {
+    return this.cfg;
+  }
+
+  getStorageKey(): string {
+    return this.cm.buildKey(this.cfg);
+  }
+
+  async checkScopes(required: string[]): Promise<boolean> {
+    try {
+      const token = await this.ensureValidToken();
+      if (!token?.scope) {
+        this.logger.warn('Token has no scope information');
+        return false;
+      }
+      
+      const hasAllScopes = required.every(scope => 
+        token.scope!.includes(scope)
+      );
+      
+      if (!hasAllScopes) {
+        throw AuthErrors.scopeInsufficient(required, token.scope!);
+      }
+      
+      return true;
+    } catch (error) {
+      if (error.kind === 'scope_insufficient') {
+        throw error;
+      }
+      this.logger.error({ error: error.message, required }, 'Scope check failed');
+      return false;
+    }
+  }
 }
 ```
 
