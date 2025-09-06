@@ -613,8 +613,8 @@ export class RedditHttpClient {
   }
 
   protected getRequestKey(): string {
-    // Use the same key as CredentialManager for consistency
-    return this.credentialManager.buildKey(this.authProvider.getConfig());
+    // Delegate to AuthProvider to avoid leaking CM here
+    return this.authProvider.getStorageKey();
   }
 
   protected extractEndpoint(url: string): string | undefined {

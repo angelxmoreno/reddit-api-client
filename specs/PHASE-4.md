@@ -927,10 +927,14 @@ export class SubredditAPI {
   async subscribe(subreddit: string): Promise<void> {
     const subredditName = RedditUtils.extractSubredditName(subreddit);
     
-    await this.client.post('/api/subscribe', {
-      action: 'sub',
-      sr_name: subredditName
-    });
+    await this.client.post(
+      '/api/subscribe',
+      new URLSearchParams({
+        action: 'sub',
+        sr_name: subredditName
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -939,10 +943,14 @@ export class SubredditAPI {
   async unsubscribe(subreddit: string): Promise<void> {
     const subredditName = RedditUtils.extractSubredditName(subreddit);
     
-    await this.client.post('/api/subscribe', {
-      action: 'unsub',
-      sr_name: subredditName
-    });
+    await this.client.post(
+      '/api/subscribe',
+      new URLSearchParams({
+        action: 'unsub',
+        sr_name: subredditName
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1360,9 +1368,11 @@ export class PostAPI {
   async save(postId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t3', postId);
     
-    await this.client.post('/api/save', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/save',
+      new URLSearchParams({ id: fullname }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1371,9 +1381,11 @@ export class PostAPI {
   async unsave(postId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t3', postId);
     
-    await this.client.post('/api/unsave', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/unsave',
+      new URLSearchParams({ id: fullname }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1382,9 +1394,11 @@ export class PostAPI {
   async hide(postId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t3', postId);
     
-    await this.client.post('/api/hide', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/hide',
+      new URLSearchParams({ id: fullname }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1393,9 +1407,11 @@ export class PostAPI {
   async unhide(postId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t3', postId);
     
-    await this.client.post('/api/unhide', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/unhide',
+      new URLSearchParams({ id: fullname }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1414,10 +1430,14 @@ export class PostAPI {
     };
 
     try {
-      const response = await this.client.post('/api/comment', {
-        api_type: 'json',
-        ...commentData
-      });
+      const response = await this.client.post(
+        '/api/comment',
+        new URLSearchParams({
+          api_type: 'json',
+          ...commentData
+        } as Record<string, string>).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
 
       // Parse comment response
       if (response?.json?.data?.things?.[0]?.data) {
@@ -1449,10 +1469,14 @@ export class PostAPI {
     };
 
     try {
-      const response = await this.client.post('/api/comment', {
-        api_type: 'json',
-        ...commentData
-      });
+      const response = await this.client.post(
+        '/api/comment',
+        new URLSearchParams({
+          api_type: 'json',
+          ...commentData
+        } as Record<string, string>).toString(),
+        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+      );
 
       if (response?.json?.data?.things?.[0]?.data) {
         return response.json.data.things[0].data as Comment;
@@ -1491,9 +1515,11 @@ export class PostAPI {
   async saveComment(commentId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t1', commentId);
     
-    await this.client.post('/api/save', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/save',
+      new URLSearchParams({ id: fullname }).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1502,9 +1528,13 @@ export class PostAPI {
   async deletePost(postId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t3', postId);
     
-    await this.client.post('/api/del', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/del',
+      new URLSearchParams({
+        id: fullname
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1513,9 +1543,13 @@ export class PostAPI {
   async deleteComment(commentId: string): Promise<void> {
     const fullname = RedditResponseParser.createFullname('t1', commentId);
     
-    await this.client.post('/api/del', {
-      id: fullname
-    });
+    await this.client.post(
+      '/api/del',
+      new URLSearchParams({
+        id: fullname
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -1524,11 +1558,15 @@ export class PostAPI {
   async editPost(postId: string, text: string): Promise<Post> {
     const fullname = RedditResponseParser.createFullname('t3', postId);
     
-    const response = await this.client.post('/api/editusertext', {
-      api_type: 'json',
-      thing_id: fullname,
-      text: text
-    });
+    const response = await this.client.post(
+      '/api/editusertext',
+      new URLSearchParams({
+        api_type: 'json',
+        thing_id: fullname,
+        text: text
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
 
     if (response?.json?.data?.things?.[0]?.data) {
       return response.json.data.things[0].data as Post;
@@ -1543,11 +1581,15 @@ export class PostAPI {
   async editComment(commentId: string, text: string): Promise<Comment> {
     const fullname = RedditResponseParser.createFullname('t1', commentId);
     
-    const response = await this.client.post('/api/editusertext', {
-      api_type: 'json',
-      thing_id: fullname,
-      text: text
-    });
+    const response = await this.client.post(
+      '/api/editusertext',
+      new URLSearchParams({
+        api_type: 'json',
+        thing_id: fullname,
+        text: text
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
 
     if (response?.json?.data?.things?.[0]?.data) {
       return response.json.data.things[0].data as Comment;
@@ -2019,12 +2061,16 @@ export class UserAPI {
       throw new Error(`Invalid username: ${to}`);
     }
 
-    await this.client.post('/api/compose', {
-      api_type: 'json',
-      to: to,
-      subject: subject,
-      text: text
-    });
+    await this.client.post(
+      '/api/compose',
+      new URLSearchParams({
+        api_type: 'json',
+        to: to,
+        subject: subject,
+        text: text
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -2035,9 +2081,13 @@ export class UserAPI {
       throw new Error(`Invalid username: ${username}`);
     }
 
-    await this.client.post('/api/block_user', {
-      name: username
-    });
+    await this.client.post(
+      '/api/block_user',
+      new URLSearchParams({
+        name: username
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -2048,9 +2098,13 @@ export class UserAPI {
       throw new Error(`Invalid username: ${username}`);
     }
 
-    await this.client.post('/api/follow_user', {
-      name: username
-    });
+    await this.client.post(
+      '/api/follow_user',
+      new URLSearchParams({
+        name: username
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 
   /**
@@ -2061,9 +2115,13 @@ export class UserAPI {
       throw new Error(`Invalid username: ${username}`);
     }
 
-    await this.client.post('/api/unfollow_user', {
-      name: username
-    });
+    await this.client.post(
+      '/api/unfollow_user',
+      new URLSearchParams({
+        name: username
+      } as Record<string, string>).toString(),
+      { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
+    );
   }
 }
 ```
