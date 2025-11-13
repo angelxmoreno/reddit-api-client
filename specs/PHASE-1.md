@@ -32,20 +32,16 @@ This phase builds the fundamental authentication system for the Reddit API clien
 **Detailed Instructions**:
 
 ```bash
-# Initialize project (from repo root)
-npm init -y
-
 # Install runtime dependencies
-npm install zod
+bun add zod
 
 # Install peer dependencies (for development)
-npm install axios keyv pino
+bun add axios keyv pino pino-pretty
 
 # Install dev dependencies
-npm install -D typescript @types/node @types/axios axios-mock-adapter
+bun add -D @types/bun
 
-# Initialize TypeScript config
-npx tsc --init
+# TypeScript config already exists
 ```
 
 **Create `tsconfig.json`**:
@@ -83,7 +79,7 @@ docs/
 ```
 
 **Acceptance Criteria**:
-- [ ] Project compiles with `npx tsc`
+- [ ] Project compiles with `bun run typecheck`
 - [ ] All dependencies installed correctly
 - [ ] Directory structure created
 - [ ] No TypeScript errors
@@ -96,7 +92,7 @@ docs/
 
 ```ts
 import { AxiosInstance } from 'axios';
-import * as pino from 'pino';
+import type pino from 'pino';
 import Keyv from 'keyv';
 
 // Credential Configuration Types
@@ -179,7 +175,7 @@ export type ValidationResult =
 // Request Types
 export interface RequestOptions {
   headers?: Record<string, string>;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   timeout?: number;
 }
 
@@ -232,51 +228,51 @@ export interface AuthError extends Error {
   };
 }
 
-export class AuthErrors {
-  static authFailed(message: string, retryable = false, originalError?: Error): AuthError {
+export const AuthErrors = {
+  authFailed(message: string, retryable = false, originalError?: Error): AuthError {
     const error = new Error(message) as AuthError;
     error.name = 'AuthError';
     error.kind = 'auth_failed';
     error.retryable = retryable;
     error.originalError = originalError;
     return error;
-  }
-  
-  static refreshFailed(message: string, retryable = false, originalError?: Error): AuthError {
+  },
+
+  refreshFailed(message: string, retryable = false, originalError?: Error): AuthError {
     const error = new Error(message) as AuthError;
     error.name = 'AuthError';
     error.kind = 'refresh_failed';
     error.retryable = retryable;
     error.originalError = originalError;
     return error;
-  }
-  
-  static rateLimited(message: string, retryable = true, retryAfter?: number): AuthError {
+  },
+
+  rateLimited(message: string, retryable = true, retryAfter?: number): AuthError {
     const error = new Error(message) as AuthError;
     error.name = 'AuthError';
     error.kind = 'rate_limited';
     error.retryable = retryable;
     error.retryAfter = retryAfter;
     return error;
-  }
-  
-  static invalidConfig(message: string): AuthError {
+  },
+
+  invalidConfig(message: string): AuthError {
     const error = new Error(message) as AuthError;
     error.name = 'AuthError';
     error.kind = 'invalid_config';
     error.retryable = false;
     return error;
-  }
-  
-  static scopeInsufficient(required: string[], available: string[]): AuthError {
+  },
+
+  scopeInsufficient(required: string[], available: string[]): AuthError {
     const message = `Required scopes [${required.join(', ')}] not available in [${available.join(', ')}]`;
     const error = new Error(message) as AuthError;
     error.name = 'AuthError';
     error.kind = 'scope_insufficient';
     error.retryable = false;
     return error;
-  }
-}
+  },
+};
 ```
 
 **Testing Instructions**:
@@ -375,42 +371,45 @@ const RateLimitRulesSchema = z.object({
 
 const RedditClientConfigSchema = z.object({
   credentials: CredentialConfigSchema,
-  storage: z.any(), // Can't validate Keyv instance with Zod
-  logger: z.any(),  // Can't validate Pino logger with Zod
-  axios: z.any().optional(),
+  storage: z.unknown(), // Can't validate Keyv instance with Zod
+  logger: z.unknown(),  // Can't validate Pino logger with Zod
+  axios: z.unknown().optional(),
   rateLimiter: z.object({
     strategy: z.enum(['throw', 'wait']),
     rules: RateLimitRulesSchema,
   }).optional(),
 });
 
-export class CredentialConfigValidator {
-  static validate(config: unknown): ValidationResult {
-    const result = CredentialConfigSchema.safeParse(config);
-    
-    if (result.success) {
-      return { valid: true };
-    }
-    
-    return {
-      valid: false,
-      errors: result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
-    };
+export function validateCredentialConfig(config: unknown): ValidationResult {
+  const result = CredentialConfigSchema.safeParse(config);
+
+  if (result.success) {
+    return { valid: true };
   }
 
-  static validateClientConfig(config: unknown): ValidationResult {
-    const result = RedditClientConfigSchema.safeParse(config);
-    
-    if (result.success) {
-      return { valid: true };
-    }
-    
-    return {
-      valid: false,
-      errors: result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
-    };
-  }
+  return {
+    valid: false,
+    errors: result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+  };
 }
+
+export function validateRedditClientConfig(config: unknown): ValidationResult {
+  const result = RedditClientConfigSchema.safeParse(config);
+
+  if (result.success) {
+    return { valid: true };
+  }
+
+  return {
+    valid: false,
+    errors: result.error.errors.map(err => `${err.path.join('.')}: ${err.message}`)
+  };
+}
+
+export const CredentialConfigValidator = {
+  validate: validateCredentialConfig,
+  validateClientConfig: validateRedditClientConfig,
+};
 ```
 
 **Testing Instructions**:
@@ -429,7 +428,7 @@ describe('CredentialConfigValidator', () => {
       userAgent: "test-app/1.0"
     };
     
-    const result = CredentialConfigValidator.validate(config);
+    const result = validateCredentialConfig(config);
     expect(result.valid).toBe(true);
   });
 
@@ -441,7 +440,7 @@ describe('CredentialConfigValidator', () => {
       userAgent: "test-app/1.0"
     };
     
-    const result = CredentialConfigValidator.validate(config);
+    const result = validateCredentialConfig(config);
     expect(result.valid).toBe(false);
     expect(result.errors).toContain('clientId: Client ID is required');
   });
@@ -457,7 +456,7 @@ describe('CredentialConfigValidator', () => {
       scope: ["read", "submit"]
     };
     
-    const result = CredentialConfigValidator.validate(config);
+    const result = validateCredentialConfig(config);
     expect(result.valid).toBe(true);
   });
 });
@@ -528,13 +527,15 @@ export function extractEndpoint(url: string): string | undefined {
 /**
  * Validates token structure
  */
-export function isValidTokenStructure(token: any): boolean {
+export function isValidTokenStructure(token: unknown): token is { access_token: string; token_type: 'bearer'; expires_in: number; received_at: number; scope: string } {
+  const t = token as Record<string, unknown>;
   return !!(
-    token?.access_token &&
-    token?.token_type === 'bearer' &&
-    typeof token?.expires_in === 'number' &&
-    token?.received_at &&
-    typeof token?.scope === 'string'
+    t?.access_token &&
+    typeof t.access_token === 'string' &&
+    t?.token_type === 'bearer' &&
+    typeof t?.expires_in === 'number' &&
+    typeof t?.received_at === 'number' &&
+    typeof t?.scope === 'string'
   );
 }
 ```
@@ -626,7 +627,7 @@ describe('Utils', () => {
 
 ```ts
 import Keyv from 'keyv';
-import * as pino from 'pino';
+import type pino from 'pino';
 import axios from 'axios';
 import { CredentialManager, StoredToken, CredentialConfig } from '../types';
 import { shortHash, calculateTokenTTL, isValidTokenStructure } from '../utils';
@@ -937,7 +938,7 @@ describe('DefaultCredentialManager', () => {
 **Create `src/auth/AuthProvider.ts`**:
 
 ```ts
-import * as pino from 'pino';
+import type pino from 'pino';
 import axios from 'axios';
 import { AuthProvider, CredentialConfig, StoredToken, CredentialManager } from '../types';
 import { AuthErrors } from '../errors';
@@ -1031,7 +1032,7 @@ export class DefaultAuthProvider implements AuthProvider {
           token = await this.fetchPasswordToken();
           break;
         default:
-          throw AuthErrors.invalidConfig(`Unsupported credential type: ${(this.cfg as any).kind}`);
+          throw AuthErrors.invalidConfig(`Unsupported credential type: ${(this.cfg as CredentialConfig).kind}`);
       }
 
       // Store the new token
@@ -1051,7 +1052,7 @@ export class DefaultAuthProvider implements AuthProvider {
   }
 
   protected async fetchAppToken(): Promise<StoredToken> {
-    const appConfig = this.cfg as any; // We know it's app config from switch
+    const appConfig = this.cfg as AppOnlyConfig; // We know it's app config from switch
     
     try {
       const response = await axios.post('https://www.reddit.com/api/v1/access_token', 
@@ -1082,7 +1083,7 @@ export class DefaultAuthProvider implements AuthProvider {
   }
 
   protected async refreshUserToken(): Promise<StoredToken> {
-    const userConfig = this.cfg as any; // We know it's user config from switch
+    const userConfig = this.cfg as UserTokensConfig; // We know it's user config from switch
     
     try {
       const response = await axios.post('https://www.reddit.com/api/v1/access_token',
@@ -1114,7 +1115,7 @@ export class DefaultAuthProvider implements AuthProvider {
   }
 
   protected async fetchPasswordToken(): Promise<StoredToken> {
-    const pwdConfig = this.cfg as any; // We know it's password config from switch
+    const pwdConfig = this.cfg as PasswordGrantConfig; // We know it's password config from switch
     
     try {
       const response = await axios.post('https://www.reddit.com/api/v1/access_token',
@@ -1344,7 +1345,7 @@ describe('DefaultAuthProvider', () => {
 **Before moving to Phase 2, ensure:**
 
 - [ ] All TypeScript compiles without errors
-- [ ] All tests pass (`npm test`)
+- [ ] All tests pass (`bun test`)
 - [ ] Configuration validation works with Zod
 - [ ] Token storage and retrieval works
 - [ ] Token validation (structure + API) works
