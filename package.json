@@ -1,0 +1,67 @@
+{
+    "name": "reddit-api-client",
+    "version": "0.1.0",
+    "description": "A modern, type-safe Reddit API client built for Node.js with TypeScript. Handles OAuth authentication, rate limiting, and multi-user scenarios automatically.",
+    "keywords": [
+        "reddit",
+        "api",
+        "oauth",
+        "typescript",
+        "client",
+        "authentication"
+    ],
+    "homepage": "https://github.com/angelxmoreno/reddit-api-client#readme",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/angelxmoreno/reddit-api-client.git"
+    },
+    "license": "MIT",
+    "author": "Angel Moreno <angelxmoreno@gmail.com>",
+    "main": "./dist/index.js",
+    "module": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE"
+    ],
+    "packageManager": "bun@1.3.0",
+    "engines": {
+        "node": ">=18.0.0",
+        "bun": ">=1.0.0"
+    },
+    "scripts": {
+        "build": "tsc",
+        "dev": "tsc --watch",
+        "test": "bun test",
+        "test:watch": "bun test --watch",
+        "typecheck": "tsc --noEmit",
+        "lint": "biome check .",
+        "lint:fix": "biome check --write",
+        "check": "bun run typecheck && bun run lint && bun test",
+        "clean": "rm -rf dist",
+        "prepublishOnly": "bun run clean && bun run check && bun run build"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.3.5",
+        "@commitlint/cli": "^20.1.0",
+        "@commitlint/config-conventional": "^20.0.0",
+        "@types/bun": "latest",
+        "lefthook": "^2.0.3",
+        "typescript": "^5.6.0"
+    },
+    "dependencies": {
+        "reddit-api-ts-docs": "^1.0.0",
+        "zod": "^4.1.12"
+    },
+    "peerDependencies": {
+        "axios": "^1.0.0",
+        "keyv": "^5.0.0",
+        "pino": "^9.0.0 || ^10.0.0"
+    },
+    "peerDependenciesMeta": {
+        "pino": {
+            "optional": false
+        }
+    }
+}
